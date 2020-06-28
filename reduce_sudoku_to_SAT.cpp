@@ -4,251 +4,201 @@
 #include <vector>
 #include <unordered_map>
 #include <algorithm>
+#include <cassert>
+#include <cstdlib>
+#include <cctype>
 
-int get_var_id(int i, int j, int d, int n){
-	int N2 = n * n;
-	int N4 = N2 * N2;
-	return i * N4 + j * N2 + d;
-}
+// A class to reduce a sudoku instance to a SAT instance
+class reduceSudokuToSAT {
 
-/*void test_get_var_id(int n){
-	for(int i=0;i<n*n; i++){
-		for(int j=0; j<n*n; j++){
-			for(int d=1; d<=n*n; d++){
-				std::cout << get_var_id(i,j,d,n) << " ";
-			}
-			std::cout << std::endl;
-		}
-		std::cout << std::endl;
+public:
+
+	// Main function of the class
+	// Reduce a sudoku instance to a SAT instance
+	void reduceSudokuToSAT_(){
+
+		// get the sudoku instance
+		getSudokuInput();
+
+		// Get the SAT clauses from the sudoku instance
+		getUnitClauses();
+
+		getCompletenessClauses();
+
+		getUniquenessClauses();
+
+		getValidityClauses();
+
+		// Output the SAT instance
+		printSatInstance();
+
+		return;
 	}
-}*/
 
-void get_sudoku_input(int & n, std::vector< std::vector<int> > & sudoku_grid){
+private:
 
-	std::string sudoku_str;
-	int N2;
-	
-	std::cin >> n >> sudoku_str;
+	int sudoku_order;								// The order of the sudoku instance
+	int square_sud_order;							// The square of the sudoku order
+	std::vector< std::vector<int> > sudoku_grid;	// The sudoku board
+	std::vector< std::vector<int> > clauses;		// The set of clauses of the SAT instance
 
-	N2 = n*n;
-
-	sudoku_grid.resize(N2, std::vector<int>(N2, 0));
-
-	for(int i=0; i < N2; i++){
-		for(int j=0; j < N2; j++){
-			sudoku_grid[i][j] = sudoku_str[i * N2 + j] - '0';
-			std::cout << sudoku_grid[i][j] << " ";
-		}
-		std::cout << std::endl;
+	// Given the position and the digit of a variable x(i,j,d), get its integer id.
+	int getVarId(int i, int j, int d){
+		int sud_ord_to_4th = square_sud_order * square_sud_order;
+		return i * sud_ord_to_4th + j * square_sud_order + d;
 	}
-	std::cout << std::endl;
-}
 
-void get_completeness_clauses(int n, std::vector< std::vector<int> > & clauses, std::vector< std::vector<int> > & sudoku_grid){
-	
-	int N2 = n * n;	
+	// Get the sudoku instance
+	void getSudokuInput(){
 
-	for(int i=0; i < N2; i++){
-		for(int j=0; j < N2; j++){
-			// if the clause is not already satisfied
-			// then add the completeness clause
-			if(!sudoku_grid[i][j]){
+		std::string sudoku_str;		// the input string representing the sudoku board initial state.
+		
+		std::cin >> sudoku_order >> sudoku_str;
 
-				// Generate the completeness clause
-				std::vector<int> comp_clause(N2);
+		square_sud_order = sudoku_order*sudoku_order;
 
-				for(int d=1; d <= N2; d++){
-					comp_clause[d-1] = get_var_id(i, j, d, n);
+		// Check that the size of the input string match the given sudoku order
+		try{
+			assert(square_sud_order*square_sud_order == (int) sudoku_str.size());
+		}catch(...){
+			throw " Format error: the size of the input string doesn't match the given sudoku order";
+		}
+
+		sudoku_grid.resize(square_sud_order, std::vector<int>(square_sud_order, 0));
+
+		// Fill the sudoku grid with the initial state using the sudoku input string
+		for(int i=0; i < square_sud_order; i++){
+			for(int j=0; j < square_sud_order; j++){
+
+				char digit = sudoku_str[i * square_sud_order + j];
+				
+				// Assign the corresponding digit integer, 0 if empty. -1 if is out of range
+				if(std::isdigit(digit))
+					sudoku_grid[i][j] = digit - '0';
+				else if(std::isalpha(digit) && std::isupper(digit))
+					sudoku_grid[i][j] = digit - 'A' + 10;
+				else if(digit == '.')
+					sudoku_grid[i][j] = 36;
+				else if(std::isalpha(digit) && std::islower(digit))
+					sudoku_grid[i][j] = digit - 'a' + 37;
+				else if(digit == '#')
+					sudoku_grid[i][j] = 63;
+				else if(digit == '@')
+					sudoku_grid[i][j] = 64;
+				else
+					sudoku_grid[i][j] = -1;
+
+				// Verify that the digits aren't out of range
+				try{
+					assert(0 <= sudoku_grid[i][j] && sudoku_grid[i][j] <= square_sud_order);
+				}catch(...){
+					throw " Format error: the characters in the input string are out of range";
 				}
-
-				// Add the completeness clause
-				clauses.push_back(comp_clause);
 			}
 		}
+		
 	}
 
-}
+	// Get the unit clauses of the position in the sudoku that are already filled
+	void getUnitClauses(){
 
-void get_uniqueness_clauses(int n, std::vector< std::vector<int> > & clauses, std::vector< std::vector<int> > & sudoku_grid){
-	
-	int N2 = n * n;	
+		for(int i=0; i < square_sud_order; i++){
+			for(int j=0; j < square_sud_order; j++){
+				// if the variable x(i,j,d) is already satisfied
+				// (with d = sudoku_grid[i][j])
+				// then add the unit clause
+				if(sudoku_grid[i][j]){
 
-	for(int i = 0; i < N2; i++){
-		for(int j = 0; j < N2; j++){
+					// the digit in the current position
+					int d = sudoku_grid[i][j];
 
-			// if the digit is not set then we add the uniqueness
-			// clauses to ensure an unique assignment to this position
-			if(!sudoku_grid[i][j]){
+					// Generate the unit clause
+					std::vector<int> unit_clause{
+						getVarId(i, j, d)
+					};
 
-				for(int d1 = 1; d1 < N2; d1++){
+					// Add the unit clause
+					clauses.push_back(unit_clause);
 
-					for(int d2 = d1+1; d2 <= N2; d2++){
+				}
+			}
+		}
 
-						// Generate the uniqueness clause
-						std::vector<int> uniq_clause{
-							-get_var_id(i,j,d1,n),
-							-get_var_id(i,j,d2,n)
-						};
+	}
 
-						// Add the uniqueness clause
-						clauses.push_back(uniq_clause);
+	// Get the clauses that guarantee all cells will be filled
+	void getCompletenessClauses(){			
+
+		for(int i=0; i < square_sud_order; i++){
+			for(int j=0; j < square_sud_order; j++){
+				// if the clause is not already satisfied
+				// then add the completeness clause
+				if(!sudoku_grid[i][j]){
+
+					// Generate the completeness clause
+					std::vector<int> comp_clause(square_sud_order);
+
+					for(int d=1; d <= square_sud_order; d++){
+						comp_clause[d-1] = getVarId(i, j, d);
+					}
+
+					// Add the completeness clause
+					clauses.push_back(comp_clause);
+				}
+			}
+		}
+
+	}
+
+	// Get the clauses that guarantee all the cells are filled by exactly one SAT variable
+	void getUniquenessClauses(){
+			
+		for(int i = 0; i < square_sud_order; i++){
+			for(int j = 0; j < square_sud_order; j++){
+
+				// if the digit is not set then we add the uniqueness
+				// clauses to ensure an unique assignment to this position
+				if(!sudoku_grid[i][j]){
+
+					for(int d1 = 1; d1 < square_sud_order; d1++){
+
+						for(int d2 = d1+1; d2 <= square_sud_order; d2++){
+
+							// Generate the uniqueness clause
+							std::vector<int> uniq_clause{
+								-getVarId(i,j,d1),
+								-getVarId(i,j,d2)
+							};
+
+							// Add the uniqueness clause
+							clauses.push_back(uniq_clause);
+						
+						}
 					
 					}
-				
-				}
-
-			}
-		}
-	}
-
-	return;
-}
-
-void get_validity_clauses_rows(int n, std::vector< std::vector<int> > & clauses, 
-													std::vector< std::vector<int> > & sudoku_grid, bool & solv){
-	
-	int N2 = n * n;
-
-	for(int row=0; row < N2; row++){
-		for(int d=1; d<=N2; d++){
-			// Now we compare two positions in the row. They can't have the same digit d
-			for(int c1=0; c1 < N2-1; c1++){
-				for(int c2=c1+1; c2 < N2; c2++){
-					// if they have the same digit, the puzzle is not solvable
-					if(sudoku_grid[row][c1] && sudoku_grid[row][c1] == sudoku_grid[row][c2]){
-						solv = false;
-						return;
-					}
-
-					// If any of the two positions is set to d, the other can't be set to d
-
-					if(sudoku_grid[row][c1]==d){
-						// Generate the validity clause
-						std::vector<int> val_clause{
-							-get_var_id(row,c2,d,n)
-						};
-
-						// Add the validity clause
-						clauses.push_back(val_clause);
-						continue;
-					}
-
-					if(sudoku_grid[row][c2]==d){
-						// Generate the validity clause
-						std::vector<int> val_clause{
-							-get_var_id(row,c1,d,n)
-						};
-
-						// Add the validity clause
-						clauses.push_back(val_clause);
-						continue;
-					}
-
-					// case when no one is set to d
-
-					// Generate the validity clause
-					std::vector<int> val_clause{
-						-get_var_id(row,c1,d,n),
-						-get_var_id(row,c2,d,n)
-					};
-
-					// Add the validity clause
-					clauses.push_back(val_clause);
 
 				}
 			}
 		}
+
 	}
 
-}
-
-void get_validity_clauses_columns(int n, std::vector< std::vector<int> > & clauses, 
-													std::vector< std::vector<int> > & sudoku_grid, bool & solv){
-	int N2 = n * n;
-
-	for(int col=0; col < N2; col++){
-		for(int d=1; d<=N2; d++){
-			// Now we compare two positions in the column. They can't have the same digit d
-			for(int r1=0; r1 < N2-1; r1++){
-				for(int r2=r1+1; r2 < N2; r2++){
-					// if they have the same digit, the puzzle is not solvable
-					if(sudoku_grid[r1][col] && sudoku_grid[r1][col] == sudoku_grid[r2][col]){
-						solv = false;
-						return;
-					}
-
-					// If any of the two positions is set to d, the other can't be set to d
-
-					if(sudoku_grid[r1][col]==d){
-						// Generate the validity clause
-						std::vector<int> val_clause{
-							-get_var_id(r2,col,d,n)
-						};
-
-						// Add the validity clause
-						clauses.push_back(val_clause);
-						continue;
-					}
-
-					if(sudoku_grid[r2][col]==d){
-						// Generate the validity clause
-						std::vector<int> val_clause{
-							-get_var_id(r1,col,d,n)
-						};
-
-						// Add the validity clause
-						clauses.push_back(val_clause);
-						continue;
-					}
-
-					// case when no one is set to d
-
-					// Generate the validity clause
-					std::vector<int> val_clause{
-						-get_var_id(r1,col,d,n),
-						-get_var_id(r2,col,d,n)
-					};
-
-					// Add the validity clause
-					clauses.push_back(val_clause);
-
-				}
-			}
-		}
-	}
-
-}
-
-void get_validity_clauses_blocks(int n, std::vector< std::vector<int> > & clauses, 
-													std::vector< std::vector<int> > & sudoku_grid, bool & solv){
-	
-	int N2 = n * n;
-
-	for(int block_r=0; block_r < N2; block_r+=n){ // choose the row in the top-left-most position in block
-		for(int block_c=0; block_c < N2; block_c+=n){ // choose the column in the top-left-most position in block
-
-			for(int d=1; d <= N2; d++){
-				// iterate over the positions in the block
-				// pairwise compare them. They can't have the same digit d
-				for(int position1 = 0; position1 < N2-1; position1++){
-					for(int position2 = position1+1; position2 < N2; position2++){
+	// Get the clauses that guarantee all the rules related to rows won't be broken
+	void getValidityClausesRows(){
+		
+		for(int row=0; row < square_sud_order; row++){
+			for(int d=1; d<=square_sud_order; d++){
+				// Now we compare two positions in the row. They can't have the same digit d
+				for(int c1=0; c1 < square_sud_order-1; c1++){
+					for(int c2=c1+1; c2 < square_sud_order; c2++){
 						
-						// get rows and columns from positions number
-						int r1 = position1/n, c1 = position1%n,
-							r2 = position2/n, c2 = position2%n;
-
-						// if they have the same digit, the puzzle is not solvable
-						if(sudoku_grid[r1][c1] && sudoku_grid[r1][c1] == sudoku_grid[r2][c2]){
-							solv = false;
-							return;
-						}
 
 						// If any of the two positions is set to d, the other can't be set to d
 
-						if(sudoku_grid[r1][c1]==d){
+						if(sudoku_grid[row][c1] == d){
 							// Generate the validity clause
 							std::vector<int> val_clause{
-								-get_var_id(r2,c2,d,n)
+								-getVarId(row,c2,d)
 							};
 
 							// Add the validity clause
@@ -256,10 +206,10 @@ void get_validity_clauses_blocks(int n, std::vector< std::vector<int> > & clause
 							continue;
 						}
 
-						if(sudoku_grid[r2][c2]==d){
+						if(sudoku_grid[row][c2] == d){
 							// Generate the validity clause
 							std::vector<int> val_clause{
-								-get_var_id(r1,c1,d,n)
+								-getVarId(row,c1,d)
 							};
 
 							// Add the validity clause
@@ -271,8 +221,8 @@ void get_validity_clauses_blocks(int n, std::vector< std::vector<int> > & clause
 
 						// Generate the validity clause
 						std::vector<int> val_clause{
-							-get_var_id(r1,c1,d,n),
-							-get_var_id(r2,c2,d,n)
+							-getVarId(row,c1,d),
+							-getVarId(row,c2,d)
 						};
 
 						// Add the validity clause
@@ -281,96 +231,190 @@ void get_validity_clauses_blocks(int n, std::vector< std::vector<int> > & clause
 					}
 				}
 			}
-			
-		} 
-	}
-
-}
-
-void get_validity_clauses(int n, std::vector< std::vector<int> > & clauses, 
-													std::vector< std::vector<int> > & sudoku_grid, bool & solv){
-	
-	get_validity_clauses_rows(n, clauses, sudoku_grid, solv);
-
-	if(solv) get_validity_clauses_columns(n, clauses, sudoku_grid, solv);
-
-	if(solv) get_validity_clauses_blocks(n, clauses, sudoku_grid, solv);
-
-	return;
-}
-
-void print_sat_conflict(){
-
-	std::cout << "c This cnf is not satisfiable\n";
-	std::cout << "p cnf 1 2\n";
-	std::cout << "1 0 -1\n"; // p ^ !p == false
-
-}
-
-int get_number_of_vars(std::vector< std::vector<int> > & clauses){
-
-	std::unordered_map<int, int> count_vars;
-
-	for(auto clause : clauses){
-		for(int var : clause){
-			count_vars[var]++;
 		}
+
 	}
 
-	return (int) count_vars.size();
-}
-
-void print_sat_instance(std::vector< std::vector<int> > & clauses){
-
-	// avoid repeated clauses
-	std::sort(clauses.begin(), clauses.end());
-	clauses.resize(std::distance(clauses.begin(),std::unique(clauses.begin(), clauses.end())));
-
-	int number_of_vars = get_number_of_vars(clauses),
-		number_of_clauses = clauses.size();
-
-	std::cout << "c This cnf is traducted from an sudoku instance. \n";
-	std::cout << "p cnf " << number_of_vars << " " << number_of_clauses << "\n";
-
-	for(auto clause : clauses){
+	// Get the clauses that guarantee all the rules related to columns won't be broken
+	void getValidityClausesColumns(){
 		
-		for(auto var : clause){
-			std::cout << var << " ";
+		for(int col=0; col < square_sud_order; col++){
+			for(int d=1; d<=square_sud_order; d++){
+				// Now we compare two positions in the column. They can't have the same digit d
+				for(int r1=0; r1 < square_sud_order-1; r1++){
+					for(int r2=r1+1; r2 < square_sud_order; r2++){
+
+						// If any of the two positions is set to d, the other can't be set to d
+
+						if(sudoku_grid[r1][col] == d){
+							// Generate the validity clause
+							std::vector<int> val_clause{
+								-getVarId(r2,col,d)
+							};
+
+							// Add the validity clause
+							clauses.push_back(val_clause);
+							continue;
+						}
+
+						if(sudoku_grid[r2][col] == d){
+							// Generate the validity clause
+							std::vector<int> val_clause{
+								-getVarId(r1,col,d)
+							};
+
+							// Add the validity clause
+							clauses.push_back(val_clause);
+							continue;
+						}
+
+						// case when no one is set to d
+
+						// Generate the validity clause
+						std::vector<int> val_clause{
+							-getVarId(r1,col,d),
+							-getVarId(r2,col,d)
+						};
+
+						// Add the validity clause
+						clauses.push_back(val_clause);
+
+					}
+				}
+			}
 		}
 
-		std::cout << "0\n";
 	}
 
-	std::cout << "p cnf " << number_of_vars << " " << number_of_clauses << "\n";
-}
+	// Get the clauses that guarantee all the rules related to blocks won't be broken
+	void getValidityClausesBlocks(){	
 
-void reduce_sudoku_to_SAT(){
+		for(int block_r=0; block_r < square_sud_order; block_r += sudoku_order){ // choose the row in the top-left-most position in block
+			for(int block_c=0; block_c < square_sud_order; block_c += sudoku_order){ // choose the column in the top-left-most position in block
 
-	int n;
-	bool solvable = true;
-	std::vector< std::vector<int> > sudoku_grid;
-	std::vector< std::vector<int> > clauses;
+				for(int d=1; d <= square_sud_order; d++){
+					// iterate over the positions in the block
+					// pairwise compare them. They can't have the same digit d
+					for(int position1 = 0; position1 < square_sud_order-1; position1++){
+						for(int position2 = position1+1; position2 < square_sud_order; position2++){
+							
+							// get rows and columns from positions number
+							int r1 = block_r + position1 / sudoku_order, c1 = block_c + position1 % sudoku_order,
+								r2 = block_r + position2 / sudoku_order, c2 = block_c + position2 % sudoku_order;
 
-	get_sudoku_input(n, sudoku_grid);
+							// If any of the two positions is set to d, the other can't be set to d
 
-	get_completeness_clauses(n, clauses, sudoku_grid);
+							if(sudoku_grid[r1][c1] == d){
+								// Generate the validity clause
+								std::vector<int> val_clause{
+									-getVarId(r2,c2,d)
+								};
 
-	get_uniqueness_clauses(n, clauses, sudoku_grid);
+								// Add the validity clause
+								clauses.push_back(val_clause);
+								continue;
+							}
 
-	get_validity_clauses(n, clauses, sudoku_grid, solvable);
+							if(sudoku_grid[r2][c2] == d){
+								// Generate the validity clause
+								std::vector<int> val_clause{
+									-getVarId(r1,c1,d)
+								};
 
-	if(!solvable){ 
-		print_sat_conflict();
+								// Add the validity clause
+								clauses.push_back(val_clause);
+								continue;
+							}
+
+							// case when no one is set to d
+
+							// Generate the validity clause
+							std::vector<int> val_clause{
+								-getVarId(r1,c1,d),
+								-getVarId(r2,c2,d)
+							};
+
+							// Add the validity clause
+							clauses.push_back(val_clause);
+
+						}
+					}
+				}
+				
+			} 
+		}
+
+	}
+
+	// Get the clauses that guarantee all the rules won't be broken.
+	// It calls three functions to get the 3 types of validity clauses. 
+	void getValidityClauses(){
+		
+		getValidityClausesRows();
+
+		getValidityClausesColumns();
+
+		getValidityClausesBlocks();
+
 		return;
 	}
 
-	print_sat_instance(clauses);
+	// Get the total number of SAT variables
+	// which is the sudoku order raised to 6.
+	int getNumberOfVars(){
 
-	return;
-}
+		return square_sud_order * square_sud_order * square_sud_order;
+
+	}
+
+	// Output the traducted SAT instance
+	void printSatInstance(){
+
+		// avoid repeated clauses
+		std::sort(clauses.begin(), clauses.end());
+		clauses.resize(std::distance(clauses.begin(),std::unique(clauses.begin(), clauses.end())));
+
+		// Get the number of SAT variables and clauses.
+		int number_of_vars = getNumberOfVars(),
+			number_of_clauses = clauses.size();
+
+		// Lines starting with c are comments. The one starting with p is the header
+		std::cout << "c This cnf is traducted from an sudoku instance. \n"; 
+		std::cout << "p cnf " << number_of_vars << " " << number_of_clauses << "\n";
+
+		// Output all the 'number_of_clauses' clauses in separate lines with a '0' at the end
+		for(auto clause : clauses){
+			
+			for(auto var : clause){
+				std::cout << var << " ";
+			}
+
+			std::cout << "0\n";
+		}
+
+	}
+
+	
+};
 
 
-int main(){
-	reduce_sudoku_to_SAT();
+int main(int argc, char const *argv[]){
+
+	// Check the number of command line arguments is ok
+	if(argc > 2){
+		std::cerr << "USAGE:\n./reduce_sudoku_to_SAT < file_name\n./reduce_sudoku_to_SAT <file_name>\n";
+		return 0;
+	}
+
+	// If a file is given then redirect the std input buffer to that file
+	if(argc == 2){
+		std::freopen(argv[1],"r",stdin);
+	}
+
+	// Create an intance of the reduceSudokuToSAT class
+	// and reduce a sudoku instance to a SAT instance
+	reduceSudokuToSAT reductor;
+	reductor.reduceSudokuToSAT_();
+
 	return 0;
 }
