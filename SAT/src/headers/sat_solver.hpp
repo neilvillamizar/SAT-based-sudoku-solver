@@ -1,74 +1,72 @@
+#include <vector>
+#include <stack>
+#include <utility>
+#include <queue>
 
+typedef struct Decision {
 
-    typedef struct Decision{
+    int var;
+    bool value;
+    bool tried_both;
+    std::vector<int> implications;
 
-        int var;
-        bool value;
-        bool tried_both;
-        std::vector<int> implications;
-        std::vector<int> deleted_clauses; 
+    Decision(int var, bool value) : var(var), value(value), tried_both(false){}
 
-        Decision(int var, bool value) : var(var), value(value), tried_both(false){}
+} Decision;
 
-    };
+typedef std::pair<int, bool> Assignment;
 
-    typedef struct Clause {
+class SATSolver{
 
-        int size;
-        bool active;
-        std::vector<int> variables;
+    private:
+
+        typedef struct Clause {
+
+            int idx;
+            int size;
+            std::vector<int> vars;
+            // watched literals
+            int fwatch, swatch;
+            Clause() : fwatch(0), swatch(1) {}
+        } Clause;
         
-        // watched literals implementation
-        int fvar, svar;
-        size_t idx;
+        std::stack<Decision> decisions; 
+        std::vector<Clause*> clauses;
+        std::vector<bool> decided;
+        std::vector<bool> value;
+        std::vector<std::vector<int>> watched; 
+        int current_var;
+        int NVar;
+        int NClauses;
+        bool SAT;
 
-        bool IsWatchedVar(int var) {
-            return var == fvar || var == svar;
-        }
+    public:
 
-        std::pair<int, bool> GetImplication(int var) {
-            
-            std::pair<int, bool> imp;
-            imp.first = (var == fvar ? svar : fvar);
-            imp.second = imp.first > 0;
-            return imp;
-        }
+        bool IsSAT();
 
-    };
+        void Initialize();
 
-    class SATSolver{
+        bool SolveExpression();
 
-        private:
+        void PrintResult();
+
+        void ReadExpression();
+
+        bool RemoveSingleVars();
+
+        bool Decide();
+
+        void DeduceImplications(std::queue<Assignment>& implications, int literal);
+
+        bool PropagateDecision();
+
+        bool ChangeDecision();
         
-            std::vector<int> vars;            // 0..N
-            std::vector<bool> value;          // 0..2*N
-            std::stack<Decision> decisions;         
+        std::vector<std::pair<int, bool>> DeduceImplications(int var);
 
+        Assignment GetImplication(Clause *clause);
 
-        public:
+        int ReplaceWatchedLiteral(Clause *clause, int var);
 
-            SATSolver(){
-                
-            }
-
-            bool IsSAT();
-
-            bool RemoveSingleVars();
-
-            bool Decide();
-
-            bool PropagateDecision();
-
-            bool SatSolver::ChangeDecision();
-            
-            std::vector<std::pair<int, bool>> DeduceImplications(int var);
-            
-            void EliminateClauses(int var, std::vector<int> &deleted_clauses);
-
-            inline bool CheckContradiction(std::pair<int, bool> &f, std::pair<int, bool> &s);
-
-            inline bool CheckContradiction(std::pair<int, bool> &imp);
-
-            bool CheckForConflicts(sd::vector<std::pair<int, bool>> &implications);
-
-    }
+        inline int mapIdx(int var) { return var + NVar; }
+};  

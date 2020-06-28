@@ -1,10 +1,12 @@
 #include <vector>
+#include <iostream>
 #include <algorithm>
 #include <utility>
 #include <queue>
+#include <cassert>
 #include "sat_solver.hpp"
 
-bool SatSolver::IsSAT() { 
+bool SATSolver::IsSAT() { 
 
     // First, we reduce every clause of size 1 and
     // implicate values from them. This is done so
@@ -32,236 +34,291 @@ bool SatSolver::IsSAT() {
 
                 // no more decisions to change, still conflict
                 // happened. Then, expresion is not satisfiable
-                return false
+                return false;
             }
         }
     }    
 }
 
-bool SatSolver::RemoveSingleVars() {
+bool SATSolver::RemoveSingleVars() {
 
-    for(Clause &clause : clauses) {
+    for(Clause *clause : clauses) {
 
-        if (clause.size == 1) {
+        if (clause->size == 1) {
 
-            int p = clause.variables[0];
+            int p = clause->vars[0];
             bool val = p > 0;
+            int idx_p = abs(p);
 
-            if (decided[p] && value[p] != val) {
+            if (decided[idx_p] && value[idx_p] != val) {
 
                 // conflict found
                 return false;
             }
 
-            value[p] =  val;
-            decided[p] = true;
-
-            return true;
+            value[idx_p] =  val;
+            decided[idx_p] = true;
         
         }
     } 
+    return true;
 }
 
-bool SatSolver::Decide() {
+bool SATSolver::Decide() {
 
-    while (!cur_var < vars.size()) {
-    
-        // retrieve next element form queue of variables yet to decide
-        int var = vars[currrent_var++]
+    // search for the next element yet to decide
+    while(++current_var <= NVar && !decided[current_var]) { 
 
-        if (decided[var]) {
-            // var value was previously implicated
-            continue;
-        }
-
-        bool val = (init_count[0][var] < init_count[1][var]);
-        // stacking the new decision
-        Decision new_decision(var,val)
-        decisions.push(new_decision);
-        // storing the value
-        decided[var] = true;
-        value[var] = val;
+        bool val = current_var > 0;
         
-    }
+        // stacking the new decision
+        Decision new_decision(current_var,val);
+        decisions.push(new_decision);
 
+        return true;
+
+    }
+    
     // no more vars to decide
     return false;
 }
 
-void SatSolver::EliminateClauses(int var, std::vector<int> &deleted_clauses) {
-    
-    for(int idx : clauses_map[var]) {
 
-        Clause &clause = clauses[idx];
+void SATSolver::DeduceImplications(std::queue<Assignment>& implications, int literal) {
 
-        if(clause.active) {
+    std::vector<int>::iterator it;
+    int lit_idx = mapIdx(literal);
+    // iterating through clauses that are whatched for the current literal
+    for(it = watched[lit_idx].begin(); it != watched[lit_idx].end();) {
+        
+        int clause_idx = (*it);
+        Clause *clause = clauses[clause_idx];
+        // checking if we can replace the watched literal
+        int new_lit_idx = ReplaceWatchedLiteral(clause, literal);
+        
+        if (new_lit_idx == -1) {
+            // no replacement found, then we check if we
+            // generated a new implication
+            Assignment implication = GetImplication(clause);
 
-            clause.active = false;
-            deleted_clauses.push_back(idx)
-        }
-    }
-}
-
-std::vector<std::pair<int, bool>> SatSolver::DeduceImplications(int var) {
-
-    std::vector<std::pair<int, bool>> implications;
-
-    for(int idx : clauses_map[var]) {
-
-        Clause &clause = clauses[idx];
-
-        if (cluse.IsWatchedVar(var)) {
-            if (!clause.ReplaceWatchedVar(var)) {
-                std::pair<int, bool> imp = clause.GetImplication(var);
-                implications.push_back(imp);
+            if (implication.first != 0) {
+                // adding it to the queue
+                implications.push(implication);
             }
+            it++;
+            
+        } else {    
+            // then we erase from the current list and add it to 
+            // the list belonging to the new literal
+            it = watched[lit_idx].erase(it);
+            watched[new_lit_idx].push_back(clause_idx);
         }
 
     }
-
-    return implications;
     
 }
 
-inline bool SatSolver::CheckContradiction(std::pair<int, bool> &f, std::pair<int, bool> &s) {
-    return f.first == s.first && f.second != s.second;
-}
+bool SATSolver::PropagateDecision() {
 
-inline bool SatSolver::CheckContradiction(std::pair<int, bool> &imp) {
-    return value[imp.first] != imp.second;
-}
+    // last decision made
+    Decision &last_decision = decisions.top();
 
-bool SatSolver::CheckForConflicts(sd::vector<std::pair<int, bool>> &implications) {
-
-    std::sort(implications.begin(), implications.end());
-    for(size_t i = 1; i < implications.size(); i++) {
-
-        if (CheckContradiction(implications[i], implications[i-1]) 
-        ||  CheckContradiction(implications[i])) {
-            return false;
-        }
-    }
-
-    return true;
-}
-
-bool SatSolver::PropagateDecision() {
-
-    Decision & last_decision = stack.top();
-
-    std::queue<std::pair<int, bool>> assignments;
-    assignments.push( {last_dec.var, last_decision.value} );
+    // queue of assignments to appl
+    std::queue<Assignment> assignments;
+    assignments.push( {last_decision.var, last_decision.value} );
 
     while (!assignments.empty()) {
         
         
-        std::pair<int, bool> assignment = assignments.front();
-        assignment.pop();
-        
-        // checking which state (negated or not) we are using
-        // for deriving implications and eliminating clauses
-        int t, f;
+        Assignment assignment = assignments.front();
+        assignments.pop();
 
-        if (assignment.value) {
-            
-            t = assignment.var; 
-            f = -t;
+        int var = assignment.first;
+        bool val = assignment.second;
 
-        } else {
-
-            f = assignment.var;
-            t = -f;        
-        } 
-
-        // The state (negated or not) of var that holds
-        // the value 'true' will be used for eliminating clauses
-        EliminateClauses(t, last_decision.deleted_clauses);
-
-        // The state (negated or not) of var that holds
-        // the value 'false' will be used for deducing implications
-        std::vector<std::pair<int,bool>> implications = DeduceImplications(f);
-
-        // Check if there is a contradiction within the implications
-        if (CheckForConflicts(implications)) {
-
+        // Checking for conflicts
+        if (decided[var] && value[var] != val) {
             // if conflict is found, report failure
             return false;
-
-        } else {
-            
-            // no conflict found, then we can store implications
-            for(std::pair<int,bool> &imp : implications) { 
-
-                // assigning the value to the variable
-                value[imp.first] = imp.second;
-                decided[imp.first] = true;
-                // remebering the change we did for this state
-                assignment.implications.push_back(imp);
-                // adding it to the queue for propagating
-                assignments.push(imp);
-
-            }
         }
+
+        // setting value
+        decided[var] = true;
+        value[var] = val;
+        // remebering the change we did for this state
+        last_decision.implications.push_back(var);
+
+        // now we want to find the implications generated by this 
+        // assignation and push them to the queue
+        DeduceImplications(assignments, (val ? -var : var));
     }
 
     return true;
 
 }
 
-void SatSolver::InitWatchedLiterals (CLause &clause) {
-
-    int fvar = -1, svar = -1;
-    size_t idx = 0;
-
-    for(; idx < clause.size; idx++) {
-
-        if (!decided[clause.variables[idx]]) {
-
-            if (fvar != -1) {
-                svar = idx;
-                break;
-            } else {
-                fvar = idx;
-            }
-        }
-    }
-
-    clause.fvar = fvar;
-    clause.svar = svar;
-}
-
-bool SatSolver::ChangeDecision () {
+bool SATSolver::ChangeDecision () {
 
     while (!decisions.empty()) {
 
         Decision &last_decision = decisions.top();
 
-        // Discard all implications and restore
-        // all clauses affected by this decision
-        for(std::pair<int, bool>& imp : implications) {
-
-            decided[imp.first] = false;
+        // Discard all implications decudec by this decision
+        for(int var : last_decision.implications) {
+            decided[var] = false;
         }
-        
-        for(int idx : deleted_clauses) {
-            // restaurar clausulas
-        }    
 
-
-        if (last_decision.tried_both) {
-
-            decided[decision.var] = false;
-            decisions.pop();
-            current_var--;
+        if (!last_decision.tried_both) {
+            
+            last_decision.value =  last_decision.value^true;
+            last_decision.tried_both = true;
+            last_decision.implications.clear();
+            current_var = last_decision.var;
 
         } else {
-            
-            value[desicion.var] ^= true;
-            decision.tried_both = true;
-            implications.clear();
-            deleted_clauses.clear();
+            decisions.pop();
         }
+        return true;
     }
 
     return false;
+}
+
+
+Assignment SATSolver::GetImplication(Clause *clause) {
+    
+    Assignment implication(0, 0);
+    std::vector<int> &vars = clause->vars;
+    int &fwatch = clause->fwatch;
+    // the implication can only be on fwatch
+    if (!decided[ abs(vars[fwatch]) ]) {
+        implication.first = abs(vars[fwatch]);
+        implication.second = vars[fwatch] > 0;
+    }
+    
+    return implication;
+}
+
+int SATSolver::ReplaceWatchedLiteral(Clause *clause, int var) {
+
+    std::vector<int> &vars = clause->vars;
+    int &fwatch = clause->fwatch;
+    int &swatch = clause->swatch;
+    int &size = clause->size;
+
+    if (vars[fwatch] == var) {
+        std::swap(fwatch, swatch);
+    }
+
+    for(swatch = 0; swatch < size; swatch++) {
+
+        if (fwatch == swatch || vars[swatch] == var) { 
+            continue;
+        }
+
+        // literal that we are considering
+        int cur = vars[swatch];
+        // its variable index
+        int cur_idx = abs(cur);
+        // value desired for current literal
+        bool des_value = cur > 0;
+
+        // if there is a literal that satisfy our clause,
+        // we pick it as our new watched literal
+        if (decided[cur_idx] && value[cur_idx] == des_value) {
+            return mapIdx(cur);
+        }
+
+        // if there is a literal that is not assigned,
+        // it is our new watched literal
+        if (decided[cur_idx] == false) {
+            return mapIdx(cur);
+        }
+    }
+
+    swatch--;
+
+    // not replacement found
+    return -1;
+}
+
+void SATSolver::ReadExpression() {
+
+    char start_code;
+    std::string format;
+    std::string line;
+
+    while (std::cin >> start_code) {
+        
+        if (start_code == 'c') {
+            // line is a comment, skip
+            getline(std::cin, line);
+            continue;
+        }
+
+        break;
+    }
+
+    // only support for cnf
+    std::cin >> format;
+    assert(format == "cnf");
+
+    std::cin >> NVar >> NClauses;
+
+    int clauses_read = 0;
+    Clause *clause = new Clause();
+
+    while (clauses_read < NClauses) {
+        
+        int p;
+        std::cin >> p;
+
+        if (p == 0) {
+            
+            clause->idx = clauses_read;
+            clause->size = clause->vars.size();
+            clauses.push_back(clause);
+            clauses_read++;
+            clause = new Clause();
+        } else {
+            clause->vars.push_back(p);
+        }
+    }
+}
+
+void SATSolver::PrintResult() {
+
+    // Printing start code y format (only support for cnf)
+    std::cout << "s" << " " << "cnf" << " ";
+    std::cout << (int)SAT << " " << NVar << std::endl;
+    for(int i = 1; i <= NVar && SAT; i++) {
+        std::cout << "v" << " " << (value[i] ? i : -i) << std::endl;
+    } 
+}
+
+void SATSolver::Initialize() {
+
+    decided.resize(NVar+1, false);
+    value.resize(NVar+1);
+    watched.resize(2*NVar+1);
+    current_var = 0;
+    for(size_t i = 0; i < (size_t)NClauses; i++) {
+    
+        Clause *clause = clauses[i];
+
+        if (clause->size < 1) {
+            watched[mapIdx(clause->vars[0])].push_back(i);
+        }
+    
+        for (size_t j = 0; j < 2; j++) {
+            watched[mapIdx(clause->vars[j])].push_back(i);
+        }
+    }
+}
+
+bool SATSolver::SolveExpression() {
+
+    Initialize();
+    SAT = IsSAT();
+    return SAT;
 }
