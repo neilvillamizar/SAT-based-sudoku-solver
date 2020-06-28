@@ -42,6 +42,7 @@ bool SATSolver::IsSAT() {
 
 bool SATSolver::RemoveSingleVars() {
 
+
     for(Clause *clause : clauses) {
 
         if (clause->size == 1) {
@@ -70,7 +71,6 @@ bool SATSolver::Decide() {
     while(++current_var <= NVar && !decided[current_var]) { 
 
         bool val = current_var > 0;
-        
         // stacking the new decision
         Decision new_decision(current_var,val);
         decisions.push(new_decision);
@@ -210,14 +210,15 @@ int SATSolver::ReplaceWatchedLiteral(Clause *clause, int var) {
         std::swap(fwatch, swatch);
     }
 
-    for(swatch = 0; swatch < size; swatch++) {
+    int new_watch = swatch;
+    for(new_watch = 0; new_watch < size; new_watch++) {
 
         if (fwatch == swatch || vars[swatch] == var) { 
             continue;
         }
 
         // literal that we are considering
-        int cur = vars[swatch];
+        int cur = vars[new_watch];
         // its variable index
         int cur_idx = abs(cur);
         // value desired for current literal
@@ -226,18 +227,17 @@ int SATSolver::ReplaceWatchedLiteral(Clause *clause, int var) {
         // if there is a literal that satisfy our clause,
         // we pick it as our new watched literal
         if (decided[cur_idx] && value[cur_idx] == des_value) {
+            swatch = new_watch;
             return mapIdx(cur);
         }
 
         // if there is a literal that is not assigned,
         // it is our new watched literal
         if (decided[cur_idx] == false) {
+            swatch = new_watch;
             return mapIdx(cur);
         }
     }
-
-    swatch--;
-
     // not replacement found
     return -1;
 }
@@ -272,9 +272,7 @@ void SATSolver::ReadExpression() {
         
         int p;
         std::cin >> p;
-
         if (p == 0) {
-            
             clause->idx = clauses_read;
             clause->size = clause->vars.size();
             clauses.push_back(clause);
@@ -283,7 +281,7 @@ void SATSolver::ReadExpression() {
         } else {
             clause->vars.push_back(p);
         }
-    }
+    }    
 }
 
 void SATSolver::PrintResult() {
@@ -300,14 +298,15 @@ void SATSolver::Initialize() {
 
     decided.resize(NVar+1, false);
     value.resize(NVar+1);
-    watched.resize(2*NVar+1);
+    watched.resize(2*NVar+2);
     current_var = 0;
     for(size_t i = 0; i < (size_t)NClauses; i++) {
     
         Clause *clause = clauses[i];
 
-        if (clause->size < 1) {
+        if (clause->size == 1) {
             watched[mapIdx(clause->vars[0])].push_back(i);
+            continue;
         }
     
         for (size_t j = 0; j < 2; j++) {
