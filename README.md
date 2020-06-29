@@ -175,3 +175,8 @@ Ambos scripts funcionan de forma análoga. Primero compilan los programas involu
 
 ## Tiempos de Ejecucion: 
 
+Se compararon los tiempos de ejecución de diversas instancias de resolución de sudoku, utiliando el sat solver propuesto contra el solver zChaff. Los resultados fueron graficados en el siguiente cuadro:
+
+![alt text](https://github.com/neilvillamizar/SAT-based-sudoku-solver/blob/master/time_bars.jpg?raw=true)
+
+Podemos notar que la ejecución de zchaff para casi todos los casos es tan rápida que el comando utilizado para medir el tiempo (time, con el flag -p) no es capaz de registrar su duración. En cambio, podemos ver la gran diferencia con los tiempos de ejecución de nuestro sat solver. Aún así, el tiempo de ejecución de estas instancias no superó el segundo para ninguna de ellas. La gran diferencia se debe al gran número de optimizaciones implementadas en el algoritmo de zchaff
