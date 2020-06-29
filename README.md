@@ -160,23 +160,33 @@ El proyecto cuenta con dos scripts en bash para su ejecución:
 
 - run_sat.sh : ejecuta el proyecto usando nuestro propio solucionador
 	
-	./run_satr.sh
+	./run_sat.sh
 
 - run_zchaff.sh : ejecuta el proyecto usando el solucionador zchaff
 	
 	./run_zchaff.sh
 
-Ambos scripts funcionan de forma análoga. Primero compilan los programas involucrados en el proyecto llamando al makefile del proyecto. Luego, para cada línea en el archivo de instancias de sudokus, traducen la instancia a SAT con el primer traductor, luego resuelven la instancia de SAT con el resolverdor de SAT del script, y finalmente traducen la solución a Sudoku. Las soluciones van al archivo solutions_log_sat.txt (o solutions_log_zchaff.txt segun sea el caso) mientras las mediciones de tiempo van al archivo time_log_sat.txt (o time_log_zchaff.txt). El Time Limit usado para ambos casos es de 2 segundos.
+Ambos scripts funcionan de forma análoga. Primero compilan los programas involucrados en el proyecto llamando al makefile del proyecto. Luego, para cada línea en el archivo de instancias de sudokus, traducen la instancia a SAT con el primer traductor, luego resuelven la instancia de SAT con el resolverdor de SAT del script, y finalmente traducen la solución a Sudoku. Las soluciones van al archivo solutions_log_sat.txt (o solutions_log_zchaff.txt segun sea el caso) mientras las mediciones de tiempo van al archivo time_log_sat.txt (o time_log_zchaff.txt). El Time Limit usado para ambos casos es de 3 segundos.
 
 
 ## Instancias Resueltas:
 
+Nuestro resolvedor de sudokus a base de SAT Solver puede resolver todas las instancias del archivo que fueron suministradas. Seguidamente, mostraremos ejemplos de instancias de sudoku y la respuesta otorgada por nuestro solver:
 
+![alt text](https://github.com/neilvillamizar/SAT-based-sudoku-solver/blob/master/media/example1.png?raw=true)
+![alt text](https://github.com/neilvillamizar/SAT-based-sudoku-solver/blob/master/media/example1_solved.png?raw=true)
+![alt text](https://github.com/neilvillamizar/SAT-based-sudoku-solver/blob/master/media/example2.png?raw=true)
+![alt text](https://github.com/neilvillamizar/SAT-based-sudoku-solver/blob/master/media/example2_solved.png?raw=true)
+![alt text](https://github.com/neilvillamizar/SAT-based-sudoku-solver/blob/master/media/example3.png?raw=true)
+![alt text](https://github.com/neilvillamizar/SAT-based-sudoku-solver/blob/master/media/example3_solved.png?raw=true)
+
+
+El resto de los resultados pueden consultarse al ejecutar el script, el cual generará el log con los resultados.
 
 ## Tiempos de Ejecucion: 
 
 Se compararon los tiempos de ejecución de diversas instancias de resolución de sudoku, utiliando el sat solver propuesto contra el solver zChaff. Los resultados fueron graficados en el siguiente cuadro:
 
-![alt text](https://github.com/neilvillamizar/SAT-based-sudoku-solver/blob/master/time_bars.jpg?raw=true)
+![alt text](https://github.com/neilvillamizar/SAT-based-sudoku-solver/blob/master/media/time_bars.jpg?raw=true)
 
 Podemos notar que la ejecución de zchaff para casi todos los casos es tan rápida que el comando utilizado para medir el tiempo (time, con el flag -p) no es capaz de registrar su duración. En cambio, podemos ver la gran diferencia con los tiempos de ejecución de nuestro sat solver. Aún así, el tiempo de ejecución de estas instancias no superó el segundo para ninguna de ellas. La gran diferencia se debe al gran número de optimizaciones implementadas en el algoritmo de zchaff
