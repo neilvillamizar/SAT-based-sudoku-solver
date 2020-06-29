@@ -154,19 +154,19 @@ Posteriormente se llama a la funcion 'setSudokuStr' la cuál se encarga de crear
 
 Finalmente se imprime por salida estándar el orden del sudoku y el string que representa la solucion a la instancia de sudoku. En getSatOutput solo se lee el input, entonces es lineal en el input, por lo que toma O(N^6) (N^6 es la cantidad e variables en el input) en tiempo, y O(N^4) en espacio ya  que solo se guardan las variables con valor True. Luego el metodo setSudokuStr toma O(N^4) ya que solo recorre el vector de las variables guardadas y tanto getPositionInSudokuStr como getDigit toman tiempo constante. En espacio, analogamente usa O(N^4) por el string y el vector de variables. En total este traductor toma tiempo acotado por el input: O(N^6), y memoria por el tamaño de la solucion al sudoku.
 
-## Scripts para correr el proyecto:
+## Scripts para ejecutar el proyecto:
 
-El proyecto cuenta con dos scripts en bash para correrlo:
+El proyecto cuenta con dos scripts en bash para su ejecución:
 
-- run_project_with_sat_solver.sh : corre el proyecto usando el solucionador propio del proyecto. Para correrlo:
+- run_sat.sh : ejecuta el proyecto usando nuestro propio solucionador
 	
 	./run_satr.sh
 
-- run_project_with_zchaff.sh : corre el proyecto usando el solucionador zchaff. Para correrlo:
+- run_zchaff.sh : ejecuta el proyecto usando el solucionador zchaff
 	
 	./run_zchaff.sh
 
-Ambos scripts funcionan de forma analoga. Primero compilan los programas involucrados en el proyecto llamando al makefile del proyecto. Luego, para cada línea en el archivo de instancias de sudokus, traducen la instancia a SAT con el primer traductor, luego resuelven la instancia de SAT con el resolverdor de SAT del script, y finalmente traducen la solucion a Sudoku. Las soluciones van al archivo solutions_log_sat.txt (o solutions_log_zchaff.txt segun sea el caso) mientras las mediciones de tiempo van al archivo time_log_sat.txt (o time_log_zchaff.txt). El Time Limit usado para ambos casos es de 2 segundos.
+Ambos scripts funcionan de forma análoga. Primero compilan los programas involucrados en el proyecto llamando al makefile del proyecto. Luego, para cada línea en el archivo de instancias de sudokus, traducen la instancia a SAT con el primer traductor, luego resuelven la instancia de SAT con el resolverdor de SAT del script, y finalmente traducen la solución a Sudoku. Las soluciones van al archivo solutions_log_sat.txt (o solutions_log_zchaff.txt segun sea el caso) mientras las mediciones de tiempo van al archivo time_log_sat.txt (o time_log_zchaff.txt). El Time Limit usado para ambos casos es de 2 segundos.
 
 
 ## Instancias Resueltas:
