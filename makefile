@@ -12,17 +12,20 @@ zchaff: src/zChaff/zchaff64/zchaff
 sat: obj/sat_solver.o obj/main_solver.o
 	@g++ -g -std=c++17 obj/main_solver.o obj/sat_solver.o -o sat_solver
 
-obj/main_solver.o: src/SAT/main_solver.cpp 
+obj/main_solver.o: src/SAT/main_solver.cpp objdir
 	@g++ -std=c++17 -I src/SAT/headers -c $< -o obj/main_solver.o
 
-obj/sat_solver.o: src/SAT/sat_solver.cpp
+obj/sat_solver.o: src/SAT/sat_solver.cpp objdir
 	@g++ -std=c++17 -I src/SAT/headers -c $< -o obj/sat_solver.o
+
+objdir: 
+	@mkdir -p obj
 
 src/zChaff/zchaff64/zchaff:
 	@cd src/zChaff/zchaff64/ && $(MAKE)
 
 clean:
-	if find obj/*.o; then rm obj/*.o; fi
+	if test -d "obj"; then rm -rd obj; fi
 	if test -f "sat_solver"; then rm sat_solver; fi
 	if test -f "zchaff"; then rm zchaff; fi
 	if test -f "retrieve_sudoku_from_SAT"; then rm retrieve_sudoku_from_SAT; fi
