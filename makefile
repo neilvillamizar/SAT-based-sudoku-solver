@@ -10,7 +10,7 @@ zchaff: src/zChaff/zchaff64/zchaff
 	@mv src/zChaff/zchaff64/zchaff zchaff
 
 sat: obj/sat_solver.o obj/main_solver.o
-	@g++ -g -std=c++17 obj/main_solver.o obj/sat_solver.o -o sat_solver
+	@g++ -std=c++17 obj/main_solver.o obj/sat_solver.o -o sat_solver
 
 obj/main_solver.o: src/SAT/main_solver.cpp objdir
 	@g++ -std=c++17 -I src/SAT/headers -c $< -o obj/main_solver.o
@@ -30,3 +30,7 @@ clean:
 	if test -f "zchaff"; then rm zchaff; fi
 	if test -f "retrieve_sudoku_from_SAT"; then rm retrieve_sudoku_from_SAT; fi
 	if test -f "reduce_sudoku_to_SAT"; then rm reduce_sudoku_to_SAT; fi
+	if test -f "solutions_log_sat.txt"; then rm solutions_log_sat.txt; fi
+	if test -f "solutions_log_zchaff.txt"; then rm solutions_log_zchaff.txt; fi
+	if test -f "time_log_sat.csv"; then rm time_log_sat.csv; fi
+	if test -f "time_log_zchaff.csv"; then rm time_log_zchaff.csv; fi
