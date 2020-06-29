@@ -160,11 +160,11 @@ El proyecto cuenta con dos scripts en bash para correrlo:
 
 - run_project_with_sat_solver.sh : corre el proyecto usando el solucionador propio del proyecto. Para correrlo:
 	
-	./run_project_with_sat_solver.sh
+	./run_satr.sh
 
 - run_project_with_zchaff.sh : corre el proyecto usando el solucionador zchaff. Para correrlo:
 	
-	./run_project_with_zchaff.sh
+	./run_zchaff.sh
 
 Ambos scripts funcionan de forma analoga. Primero compilan los programas involucrados en el proyecto llamando al makefile del proyecto. Luego, para cada línea en el archivo de instancias de sudokus, traducen la instancia a SAT con el primer traductor, luego resuelven la instancia de SAT con el resolverdor de SAT del script, y finalmente traducen la solucion a Sudoku. Las soluciones van al archivo solutions_log_sat.txt (o solutions_log_zchaff.txt segun sea el caso) mientras las mediciones de tiempo van al archivo time_log_sat.txt (o time_log_zchaff.txt). El Time Limit usado para ambos casos es de 2 segundos.
 
