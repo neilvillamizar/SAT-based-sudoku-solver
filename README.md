@@ -1,6 +1,13 @@
 # SAT-based-sudoku-solver
 A SAT based Sudoku solver implemented in c++ for the subject "Algorithms Design I" at Simon Bolivar University
 
+
+# IMPORTANTE
+Si estas leyendo esto, significa que no nos dio chance de terminar el proyecto y lo que teníamos fue pulleado :(
+Existe una versión de nuestro sat solver pero que no funciona correctamente
+Además, la documentación y las pruebas no han sido terminadas
+Estamos trabajando en completarlo y esperamos que esa nueva version pueda ser corregida :(
+
 En este proyecto se implemento un resolvedor de Sudoku, basado en un resolvedor de SAT (el problema de satisfacibilidad booleana). En otras palabras se hizo una reduccion del problema del Sudoku al problema SAT. 
 
 ## Descripcion del problema del Sudoku:
@@ -109,3 +116,4 @@ Ambos scripts funcionan de forma analoga. Primero compilan los programas involuc
 
 
 ## Tiempos de Ejecucion: 
+
