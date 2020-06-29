@@ -2,13 +2,13 @@ all: Translators/retrieve_sudoku_from_SAT.cpp Translators/reduce_sudoku_to_SAT.c
 	g++ -std=c++17 Translators/retrieve_sudoku_from_SAT.cpp -o retrieve_sudoku_from_SAT
 	g++ -std=c++17 Translators/reduce_sudoku_to_SAT.cpp -o reduce_sudoku_to_SAT
 	mv zChaff/zchaff64/zchaff zchaff 
-	g++ -std=c++17 obj/main_solver.o obj/sat_solver.o -o sat_solver
+	g++ -g -std=c++17 obj/main_solver.o obj/sat_solver.o -o sat_solver
 
 obj/main_solver.o: SAT/src/main_solver.cpp 
-	g++ -std=c++17 -I SAT/src/headers -c $< -o obj/main_solver.o
+	g++ -std=c++17 -g -I SAT/src/headers -c $< -o obj/main_solver.o
 
 obj/sat_solver.o: SAT/src/sat_solver.cpp
-	g++ -std=c++17 -I SAT/src/headers -c $< -o obj/sat_solver.o
+	g++ -std=c++17 -g -I SAT/src/headers -c $< -o obj/sat_solver.o
 
 zChaff/zchaff64/zchaff:
 	cd zChaff/zchaff64/ && $(MAKE)
