@@ -1,9 +1,8 @@
 # SAT-based-sudoku-solver
-A SAT based Sudoku solver implemented in c++ for the subject "Algorithms Design I" at Simon Bolivar University
 
-En este proyecto se implemento un resolvedor de Sudoku, basado en un resolvedor de SAT (el problema de satisfacibilidad booleana). En otras palabras se hizo una reduccion del problema del Sudoku al problema SAT. 
+En este proyecto se implementó un resolvedor de Sudoku, basado en un resolvedor de SAT (el problema de satisfacibilidad booleana). En otras palabras se hizo una reduccion del problema del Sudoku al problema SAT. 
 
-## Descripcion del problema del Sudoku:
+## Descripción del problema del Sudoku:
 
 Dado un número entero positivo N, un tablero de Sudoku de orden N es una matrix de N x N filas y
 N x N columnas. La matriz está dividida en N x N secciones disjuntas, cada una una matriz de tamaño
@@ -80,7 +79,7 @@ La implementación del resolvedor de SAT puede encontrarse en el directorio src/
 
 El enfoque que tomamos para resolver el problema, consiste en un backtracking iterativo con ciertas optimizaciones para evitar cálculos innecesarios. 
 
-####Las estructuras de datos
+#### Las estructuras de datos
 
 Las descripción general de las principales estructuras de datos es la siguiente:
 
@@ -94,7 +93,7 @@ Las descripción general de las principales estructuras de datos es la siguiente
 - queue<Assignment> assignments: colas de variables asignadas esperando por ser propagadas
 - Matrix<int> watched: estructura que, para cada variable, almacena los índices de las clausulas que vigila.
 
-####Métodos
+#### Métodos
 
 Una descripción general de los métodos más importantes implementados es la siguiente:
 
@@ -104,6 +103,45 @@ Una descripción general de los métodos más importantes implementados es la si
 - El método PropagateDecision, que se encarga de la propagación de todas las asignaciones pendientes. Esto incluye setear su valor, almacenar esta acción en el último estado actual, y llamar al método DeduceImplications para generar más asignaciones
 - El método DeduceImplications se encarga de revisar todas las implicaciones que pudieron ser generadas a partir de la última asignación de una variable.
 - El método ChangeDecision se encarga de recuperar el estado en caso de conflicto
+
+#### Enfoque y flujo del programa
+
+La idea de nuestro enfoque es optimizar el algoritmo general del backtracking iterativo que sigue los siguientes pasos:
+
+  1. Decidir una variable
+  2. Si no hay más variables por decidir, la expresión se satisface
+  3. Propagar la última decisión realizada, y chequear conflictos
+  4. Si ocurre algún conflicto, intentar cambiar el valor de la última decisión. Si esto ya fue hecho, recuperar el estado previo.
+  5. En caso de no haber conflictos, volver al paso 1
+
+Las optimizaciones planteadas son las siguientes:
+
+##### Unit propagation
+
+La idea general de unit propagation es que, después de cada asignación de alguna variable, se chequea si alguna de las cláusulas se reduce a una cláusula de tamaño 1 (el resto de sus literales fue asignado en falso). De esta manera, la única posibilidad de que la expresión sea satisfacible es que este literal evalue verdadero, por lo que el valor de la variable queda implicado. 
+
+##### Watched Literals
+
+La idea de esta optimización es mantener para cada cláusula, dos literales que aún no se encuentren asignados, o que tengan el valor true asignado. De esta manera, cuando una asignación es realizada con el valor falso (estas son las asignaciones que pueden generar implicaciones), sólo debemos chequear las cláusulas donde esa variable sea una de las vigilantes de la cláusula, y seguir el siguiente algoritmo:
+
+  1. Si puedo conseguir otra variable que no esté asignada en la cláusula, o cuyo valor sea verdadero, entonces esta nueva variable será uno de los vigilantes de la cláusula
+  2. Si no existe tal variable, entonces podemos asegurarnos de que el otro vigilante debe evaluar verdadero para que la expresión sea satisfacible.
+	
+Lo interesante de esta técnica es que esta propiedad se mantiene en el backtracking, y no existe la necesidad de deshacer ningún cambio. Luego, esta técnica reduce un chequeo que pudo ser O(|C|x|V|), donde |C| es el número de cláusulas y |V| el número de variables, a una operación que puede tomar tiempo constante para cada cláusula que sea vigilada por una variable. Potencialmente, la complejidad de este chequeo sigue manteniéndose en O(|C|x|V|), ya que una variable puede vigilar a todas las cláusulas, y el reemplazo de esta puede ser caro. Pero en la práctica esta técnica ha sido realmente efectiva reduciendo el tiempo de ejecución de diferentes sat solvers.
+
+Así, el flujo general del programa, es el siguiente:
+
+En primer lugar, se reducen todas las cláusulas de tamaño uno, al recorrer la lista de cláusulas y mantener las asignaciones realizadas. Luego, se llama al método de propagación para generar las posibles implicaciones. La complejidad del método, sin considerar la llamda a la función de propagación, es líneal en el número de cláusulas (ya que solo se hace una serie de operaciones constantes por cada cláusula de tamaño uno).
+
+Luego, si ningún conflicto fue encontrado en esta ejecución, se escoge una variable que no ha sido asignada, y se asigna un valor sobre esta, agregándola en la cola de decisiones por propagar. También, se crea en la pila un estado donde se almacenará las variables que son asignadas a partir de esta desición, y otros valores para recuperar el estado en caso de un conflicto. La complejidad de este método es asintóticamente lineal en el número de variables (porque se busca asignar la siguiente variable), pero en general solo realizará un número constante de operaciones
+
+Después de esto, entra en acción el método de propagación. Este toma la cola de decisiones por asignar, y va realizando el chequeo de conflictos con cada una de ellas. Si la introducción de una asignación no induce un conflicto, el valor de la variable es asignado, y se almacena en la pila que un cambio fue realizado. Luego, se da paso al método que deriva las implicaciones. Potencialmente, cualquier asignación puede generar implicaciones, dado a las negaciones. Por lo tanto, para el estado de la variable que fue asignado en falso (esto es, p si la asignación fue p = false, o !p si la asignación fue p = true), se llamará a la función de deducción de implicaciones. Este función recorrerá las cláusulas de las que el literal es un vigilante, chequeando si cualquier implicacion es generada. Cómo se explicó anteriormente, la complejidad de esta operación está acotada asintóticamente por el número de cláusulas multiplicado por el número de variables, pero en la práctica el funcionamiento de este método es mucho más veloz. Después de que cada implicación fue descubierta y se realizó lo necesario para mantener la propiedad de watched literals, las implicaciones generadas son insertadas en la cola donde esperarán a ser asignadas.
+
+Si en alguna de estas asignaciones ocurre un error, el programa es dirigido a la función que recupera el estado. Esta función verifica si la última asignación evaluó tanto el valor verdadero como falso. Si no, entonces el valor es modificado, se recupera el estado de las variables, y se realiza la nueva asignación para esta variable. En cambio, si ya se intentó usar ambos valores y en ambos el conflicto fue encontrado, entonces se elimina esta decisión de la pila de estados y se itera al siguiente estado en la pila. Este método realiza un número de operaciones lineal al tamaño de variables por cada iteración. 
+
+Finalmente, si un conjunto de asignaciones e implicaciones no genera un conflicto, entonces se responderá que la expresión se satisface. Por otro lado, si cada camino lleva a un conflicto, entonces la expresión se considera insatisfacible.
+
+La complejidad general del algoritmo es díficil de calcular. Sabemos que está acotada porr una función exponencial, pero dependerá mucho del tipo de expresión la cantidad de operaciones utilizadas.
 
 ## Traductor de SAT a Sudoku:
 
