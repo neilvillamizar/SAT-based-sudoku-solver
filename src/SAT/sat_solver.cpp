@@ -80,6 +80,7 @@ bool SATSolver::PropagateDecision() {
 
     while (!assignments.empty()) {
         
+        // last deduced or decided assignment
         Assignment assignment = assignments.front();
         assignments.pop();
 
@@ -95,6 +96,7 @@ bool SATSolver::PropagateDecision() {
         // setting value
         decided[var] = true;
         value[var] = val;
+
         // remebering the change we are doing for this state
         if (!decisions.empty()) {
             Decision &last_decision = decisions.top();
@@ -105,6 +107,7 @@ bool SATSolver::PropagateDecision() {
         // assignation and push them to the queue
         DeduceImplications(val ? -var : var);
     }
+    
     return true;
 }
 
@@ -117,6 +120,7 @@ void SATSolver::DeduceImplications(int literal) {
     // iterating through clauses that are whatched for the current literal
     for(it = watched[lit_idx].begin(); it != watched[lit_idx].end();) {
         
+        // getting clause
         int clause_idx = (*it);
         Clause *clause = clauses[clause_idx];
 
@@ -126,11 +130,12 @@ void SATSolver::DeduceImplications(int literal) {
         if (new_lit_idx == -1) {
 
             // no replacement found, then we check if we
-            // generated a new implication
+            // generated a new implication (i.e. we have a unit clause)
             Assignment implication = GetImplication(clause);
 
             // checking if the implicated value was already decided
             if (implication.first != 0) {
+                // unit clause, then implication was found
                 // adding it to the queue
                 assignments.push(implication);
             }
@@ -152,7 +157,7 @@ bool SATSolver::ChangeDecision () {
 
         Decision &last_decision = decisions.top();
 
-        // Discard all implications decudec by this decision
+        // Discard all implications deduced by this decision
         for(int var : last_decision.implications) {
             decided[var] = false;
         }
@@ -174,6 +179,7 @@ bool SATSolver::ChangeDecision () {
             decisions.pop();
         }
     }
+
     return false;
 }
 

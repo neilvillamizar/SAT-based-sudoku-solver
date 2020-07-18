@@ -5,7 +5,7 @@
 int main(int argc, char **argv) {
 
     if (argc != 1 && argc != 3) {
-        std::cout << "Wrong Usage\nCorrect usage: (1) ./sat <inputFile> <outputFile>\n(2) ./sat";
+        std::cout << "Wrong Usage\nCorrect usage:\n(1) ./sat <inputFile> <outputFile>\n(2) ./sat ";
         return EXIT_FAILURE;
     }
 

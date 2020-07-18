@@ -1,15 +1,12 @@
-X = csvread('time_log_zchaff.csv')
-Y = csvread('time_log_sat.csv')
-
-X = X(1:30,:)
-Y = Y(1:30,:)
+X = csvread('log/time_log_zchaff.csv')
+Y = csvread('log/time_log_sat.csv')
 
 figure
 M = [ X, Y ]
-x = 1:1:30
+x = 1:1:length(X)
 bar(x,M,'grouped')
 xlabel("Ejecuciones")
 ylabel("Tiempo")
-legend("zchaff", "Nuestro sat")
+legend("zchaff", "Implementación propia")
 
-print("time_bars","-djpeg")
+print("media/time_bars","-djpeg")
